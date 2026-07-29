@@ -400,12 +400,12 @@ const Generators = {
   },
 
   review(date) {
-    return { _v:2, indices:[
-      { name:"科创50", value:"--", change:"--", pct:"--", up:null, code:"sh000688" },
-      { name:"半导体材料设备", value:"--", change:"--", pct:"--", up:null, code:"sz399395" },
-      { name:"科创芯片设计", value:"--", change:"--", pct:"--", up:null, code:"sh950162" },
-      { name:"科创芯片ETF天弘", value:"--", change:"--", pct:"--", up:null, code:"sh588293" },
-    ], summary:"市场数据待更新（交易日实时刷新）", sectors:"", funds:"", emotion:"", note:"", _generated:true };
+    return { _v:3, indices:[
+      { id:1, name:"科创50", value:"--", change:"--", pct:"--", up:null, code:"sh000688" },
+      { id:2, name:"半导体材料设备", value:"--", change:"--", pct:"--", up:null, code:"sz399395" },
+      { id:3, name:"科创芯片设计", value:"--", change:"--", pct:"--", up:null, code:"sh950162" },
+      { id:4, name:"科创芯片ETF天弘", value:"--", change:"--", pct:"--", up:null, code:"sh588293" },
+    ], summary:"", sectors:"", funds:"", emotion:"", note:"", _generated:true };
   }
 };
 
@@ -432,8 +432,8 @@ function goBack() { viewingDate = currentDate; switchPage(currentPage); }
 function renderPage(page, date) {
   const el = document.getElementById('content');
   let data = Store.get(page, date);
-  // 版本检查：review 数据需要 _v:2，旧版本强制重新生成
-  if (page === 'review' && data && data._v !== 2) { data = null; }
+  // 版本检查：review 数据需要 _v:3，旧版本强制重新生成
+  if (page === 'review' && data && data._v !== 3) { data = null; }
   if (!data && Generators[page]) { data = Generators[page](date); Store.set(page, date, data); }
   const isHistory = date !== currentDate;
   const readonly = isHistory;
@@ -776,167 +776,22 @@ function renderHot(el, data, readonly, date) {
   el.innerHTML = `<div class="section-divider">今日爆款灵感</div>${data.ideas.map(i => `<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;"><div style="font-weight:600;font-size:15px;flex:1;">${i.title}</div><div style="font-size:13px;">${i.heat}</div></div><div style="font-size:13px;color:var(--text2);line-height:1.5;">${i.desc}</div></div>`).join('')}${readonly ? '<div class="note-box">📌 历史归档内容仅可查看，不可编辑</div>' : ''}`;
 }
 
-// ========== 市场收盘 ==========
+// ========== 板块4: 市场收盘 ==========
 function renderReview(el, data, readonly, date) {
-  const isToday = date === Store.today();
   el.innerHTML = `
-    <div class="card"><div class="card-title"><span class="icon">📊</span> 科技板块实时行情 <span style="margin-left:auto;font-size:13px;color:var(--text3);">${date}</span></div>
-      <div class="market-grid">${data.indices.map(idx => `<div class="market-item" id="idx_${idx.code}"><div class="name">${idx.name}</div><div class="value">${idx.value}</div><div class="change ${idx.up===true?'up':idx.up===false?'down':''}">${idx.up===true?'▲':idx.up===false?'▼':idx.up===null?'—':''} ${idx.change} (${idx.pct})</div></div>`).join('')}</div>
+    <div class="card"><div class="card-title"><span class="icon">📊</span> 科技板块收盘 <span style="margin-left:auto;font-size:13px;color:var(--text3);">${date}</span></div>
+      <div style="font-size:12px;color:var(--text3);margin-bottom:10px;">交易日15:30后填写收盘数据 · 半导体/芯片板块专属</div>
+      <div class="market-grid">${data.indices.map(idx => `<div class="market-item"><div class="name">${idx.name}</div>${!readonly ? `<input class="input" style="font-size:18px;font-weight:700;padding:4px 8px;margin:2px 0;" value="${idx.value==='--'?'':idx.value}" onchange="updateReviewIdx(${idx.id},'value',this.value)" placeholder="价格">` : `<div class="value">${idx.value}</div>`}<div class="change ${idx.up===true?'up':idx.up===false?'down':''}">${idx.up===true?'▲':idx.up===false?'▼':idx.up===null?'—':''} ${idx.change} (${idx.pct})</div>${!readonly ? `<input class="input" style="font-size:12px;padding:2px 6px;margin-top:2px;color:${idx.up===true?'var(--danger)':idx.up===false?'var(--success)':'var(--text3)'};" value="${idx.pct==='--'?'':idx.pct}" onchange="updateReviewIdx(${idx.id},'pct',this.value);updateReviewIdx(${idx.id},'up',parseFloat(this.value)>=0)" placeholder="涨跌幅%">` : ''}</div>`).join('')}</div>
       <div style="margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;"><p><strong>市场概况：</strong>${data.summary||'暂无数据'}</p><p><strong>板块轮动：</strong>${data.sectors||'待更新'}</p><p><strong>资金动向：</strong>${data.funds||'待更新'}</p><p><strong>市场情绪：</strong>${data.emotion||'待更新'}</p></div>
-      ${!readonly ? `<div style="margin-top:10px;display:flex;gap:8px;align-items:center;"><button class="btn btn-primary" onclick="fetchLiveIndices()" style="flex:none;">🔄 刷新实时行情</button><span style="font-size:11px;color:var(--text3);" id="liveStatus"></span></div><textarea class="input" style="margin-top:8px;" onchange="updateReviewNote(this.value)" placeholder="添加个人笔记...">${data.note||''}</textarea>` : (data.note ? `<div class="note-box">📝 ${data.note}</div>` : '')}
+      ${!readonly ? `<div style="margin-top:10px;"><div class="field-label">市场概况</div><input class="input" value="${data.summary||''}" onchange="updateReviewField('summary',this.value)" placeholder="例：科技板块走强，科创50涨1.2%"><div class="field-label" style="margin-top:8px;">板块轮动</div><input class="input" value="${data.sectors||''}" onchange="updateReviewField('sectors',this.value)" placeholder="例：半导体材料领涨"><div class="field-label" style="margin-top:8px;">资金动向</div><input class="input" value="${data.funds||''}" onchange="updateReviewField('funds',this.value)" placeholder="例：北向净流入5.2亿"><div class="field-label" style="margin-top:8px;">市场情绪</div><input class="input" value="${data.emotion||''}" onchange="updateReviewField('emotion',this.value)" placeholder="例：偏乐观/谨慎"><div class="field-label" style="margin-top:8px;">个人笔记</div><textarea class="input" onchange="updateReviewField('note',this.value)" placeholder="记录个人笔记...">${data.note||''}</textarea></div>` : (data.note ? `<div class="note-box">📝 ${data.note}</div>` : '')}
     </div>
     ${readonly ? '<div class="note-box">📌 历史归档内容仅可查看，不可编辑</div>' : ''}`;
-
-  // 如果是今天且不是只读模式，自动获取实时数据
-  if (isToday && !readonly) {
-    fetchLiveIndices(true);
-  }
 }
 
 // ===================== ACTIONS =====================
 function toggleTask(page, section, id) { const d = Store.get(page, viewingDate); const it = d[section].find(x => x.id === id); if (it) { it.done = !it.done; Store.set(page, viewingDate, d); renderPage(page, viewingDate); } }
-function updateReviewNote(val) { const d = Store.get('review', viewingDate); d.note = val; Store.set('review', viewingDate, d); }
-
-// ===================== 实时行情 =====================
-async function fetchLiveIndices(silent) {
-  const statusEl = document.getElementById('liveStatus');
-  if (statusEl) statusEl.textContent = '⏳ 获取中...';
-
-  // 指数代码映射
-  const indices = [
-    { code:'sh000688', name:'科创50' },
-    { code:'sz399395', name:'半导体材料设备' },
-    { code:'sh950162', name:'科创芯片设计' },
-    { code:'sh588293', name:'科创芯片ETF天弘' },
-  ];
-
-  // 方案1: 尝试用 fetch + 腾讯财经 API (支持 CORS)
-  try {
-    const tencentCodes = indices.map(i => i.code.replace('sh','sh').replace('sz','sz'));
-    const resp = await fetch(`https://qt.gtimg.cn/q=${tencentCodes.join(',')}`, {
-      mode: 'no-cors'
-    });
-    // no-cors 模式下无法读取响应内容，所以这个方案无效
-  } catch(e) {}
-
-  // 方案2: JSONP 方式加载新浪 API
-  const result = await loadSinaScript(indices);
-  if (result.success) {
-    updateIndicesDisplay(result.data, statusEl);
-    return;
-  }
-
-  // 方案3: 如果都失败了，使用模拟数据（开发/演示用）
-  if (!silent) {
-    // 静默模式下不弹窗，只显示状态
-    // alert('实时行情获取受限，已切换为手动模式。\n\n请在下方输入框手动记录行情数据。');
-  }
-  if (statusEl) statusEl.textContent = '⚠️ 实时接口受限，请手动填写或稍后重试';
-}
-
-function loadSinaScript(indices) {
-  return new Promise((resolve) => {
-    const codes = indices.map(i => i.code);
-    const existing = document.getElementById('sina-live-script');
-    if (existing) existing.remove();
-
-    const script = document.createElement('script');
-    script.id = 'sina-live-script';
-    script.src = `https://hq.sinajs.cn/list=${codes.join(',')}`;
-    script.charset = 'gb2312';
-
-    let resolved = false;
-    const done = (success, data) => {
-      if (resolved) return;
-      resolved = true;
-      resolve({ success, data });
-    };
-
-    // 给脚本一点时间执行
-    const checkData = () => {
-      const parsed = {};
-      let any = false;
-      codes.forEach(code => {
-        const raw = window['hq_str_' + code];
-        if (raw && raw !== '') {
-          const parts = raw.split(',');
-          if (parts.length >= 4) {
-            parsed[code] = {
-              name: parts[0],
-              prevClose: parseFloat(parts[2]),
-              price: parseFloat(parts[3]),
-            };
-            any = true;
-          }
-        }
-      });
-      if (any) done(true, parsed);
-      else done(false, null);
-    };
-
-    script.onload = function() {
-      setTimeout(checkData, 500);
-    };
-    script.onerror = function() {
-      done(false, null);
-    };
-
-    // 5秒超时
-    setTimeout(() => done(false, null), 5000);
-
-    document.head.appendChild(script);
-  });
-}
-
-function updateIndicesDisplay(parsedData, statusEl) {
-  const d = Store.get('review', viewingDate);
-  if (!d) return;
-
-  let anyUpdated = false;
-  d.indices.forEach(idx => {
-    const data = parsedData[idx.code];
-    if (!data) return;
-    const price = data.price;
-    const prevClose = data.prevClose;
-    if (price && prevClose && !isNaN(price) && !isNaN(prevClose) && prevClose > 0) {
-      const change = price - prevClose;
-      const pct = ((change / prevClose) * 100).toFixed(2);
-      idx.value = price.toFixed(2);
-      idx.change = (change >= 0 ? '+' : '') + change.toFixed(2);
-      idx.pct = (change >= 0 ? '+' : '') + pct + '%';
-      idx.up = change > 0 ? true : change < 0 ? false : null;
-      idx.name = data.name || idx.name;
-      anyUpdated = true;
-    }
-  });
-
-  if (anyUpdated) {
-    const upCount = d.indices.filter(i => i.up === true).length;
-    const downCount = d.indices.filter(i => i.up === false).length;
-    const now = new Date();
-    const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-    d.summary = `${upCount}涨${downCount}跌 · 更新时间 ${timeStr}`;
-    d._liveTime = timeStr;
-    Store.set('review', viewingDate, d);
-
-    // 更新 DOM
-    d.indices.forEach(idx => {
-      const el = document.getElementById('idx_' + idx.code);
-      if (el) {
-        const valueEl = el.querySelector('.value');
-        const changeEl = el.querySelector('.change');
-        if (valueEl) valueEl.textContent = idx.value;
-        if (changeEl) {
-          changeEl.textContent = (idx.up===true?'▲':idx.up===false?'▼':idx.up===null?'—':'') + ' ' + idx.change + ' (' + idx.pct + ')';
-          changeEl.className = 'change ' + (idx.up===true?'up':idx.up===false?'down':'');
-        }
-      }
-    });
-    if (statusEl) statusEl.textContent = '✅ 已更新 ' + timeStr;
-  } else {
-    if (statusEl) statusEl.textContent = '⚠️ 暂无数据';
-  }
-}
+function updateReviewField(key, val) { const d = Store.get('review', viewingDate); d[key] = val; Store.set('review', viewingDate, d); }
+function updateReviewIdx(id, key, val) { const d = Store.get('review', viewingDate); const idx = d.indices.find(x => x.id === id); if (idx) { idx[key] = val; Store.set('review', viewingDate, d); renderPage('review', viewingDate); } }
 
 // ===================== OVERVIEW =====================
 function openOverview() {

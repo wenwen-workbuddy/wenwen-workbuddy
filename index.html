@@ -802,109 +802,140 @@ async function fetchLiveIndices(silent) {
   const statusEl = document.getElementById('liveStatus');
   if (statusEl) statusEl.textContent = '⏳ 获取中...';
 
-  // 使用 JSONP 绕过跨域限制
-  const codes = ['sh000688','sz399395','sh950162','sh588293'];
-  const callbackName = 'sinaCallback_' + Date.now();
+  // 指数代码映射
+  const indices = [
+    { code:'sh000688', name:'科创50' },
+    { code:'sz399395', name:'半导体材料设备' },
+    { code:'sh950162', name:'科创芯片设计' },
+    { code:'sh588293', name:'科创芯片ETF天弘' },
+  ];
 
+  // 方案1: 尝试用 fetch + 腾讯财经 API (支持 CORS)
+  try {
+    const tencentCodes = indices.map(i => i.code.replace('sh','sh').replace('sz','sz'));
+    const resp = await fetch(`https://qt.gtimg.cn/q=${tencentCodes.join(',')}`, {
+      mode: 'no-cors'
+    });
+    // no-cors 模式下无法读取响应内容，所以这个方案无效
+  } catch(e) {}
+
+  // 方案2: JSONP 方式加载新浪 API
+  const result = await loadSinaScript(indices);
+  if (result.success) {
+    updateIndicesDisplay(result.data, statusEl);
+    return;
+  }
+
+  // 方案3: 如果都失败了，使用模拟数据（开发/演示用）
+  if (!silent) {
+    // 静默模式下不弹窗，只显示状态
+    // alert('实时行情获取受限，已切换为手动模式。\n\n请在下方输入框手动记录行情数据。');
+  }
+  if (statusEl) statusEl.textContent = '⚠️ 实时接口受限，请手动填写或稍后重试';
+}
+
+function loadSinaScript(indices) {
   return new Promise((resolve) => {
-    window[callbackName] = function() {
-      // 新浪 API 不返回 JSONP，而是直接写入全局变量 hq_str_xxx
-      // 所以我们通过 script 标签加载后读取这些变量
-      cleanup();
-      parseSinaData();
-      resolve();
-    };
+    const codes = indices.map(i => i.code);
+    const existing = document.getElementById('sina-live-script');
+    if (existing) existing.remove();
 
-    function cleanup() {
-      delete window[callbackName];
-      if (script && script.parentNode) script.parentNode.removeChild(script);
-    }
-
-    function parseSinaData() {
-      const d = Store.get('review', viewingDate);
-      if (!d) return;
-      let anyUpdated = false;
-
-      codes.forEach((code, i) => {
-        const idx = d.indices[i];
-        if (!idx) return;
-        const varName = 'hq_str_' + code;
-        const raw = window[varName];
-        if (!raw) return;
-        const parts = raw.split(',');
-        if (parts.length < 5) return;
-        const name = parts[0];
-        const prevClose = parseFloat(parts[2]);
-        const price = parseFloat(parts[3]);
-
-        if (price && prevClose && !isNaN(price) && !isNaN(prevClose)) {
-          const change = price - prevClose;
-          const pct = ((change / prevClose) * 100).toFixed(2);
-          idx.value = price.toFixed(2);
-          idx.change = (change >= 0 ? '+' : '') + change.toFixed(2);
-          idx.pct = (change >= 0 ? '+' : '') + pct + '%';
-          idx.up = change > 0 ? true : change < 0 ? false : null;
-          idx.name = name || idx.name;
-          anyUpdated = true;
-        }
-      });
-
-      if (anyUpdated) {
-        const upCount = d.indices.filter(i => i.up === true).length;
-        const downCount = d.indices.filter(i => i.up === false).length;
-        const now = new Date();
-        const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
-        d.summary = `${upCount}涨${downCount}跌 · 更新时间 ${timeStr}`;
-        d._liveTime = timeStr;
-        Store.set('review', viewingDate, d);
-
-        // 更新 DOM
-        d.indices.forEach(idx => {
-          const el = document.getElementById('idx_' + idx.code);
-          if (el) {
-            const valueEl = el.querySelector('.value');
-            const changeEl = el.querySelector('.change');
-            if (valueEl) valueEl.textContent = idx.value;
-            if (changeEl) {
-              changeEl.textContent = (idx.up===true?'▲':idx.up===false?'▼':idx.up===null?'—':'') + ' ' + idx.change + ' (' + idx.pct + ')';
-              changeEl.className = 'change ' + (idx.up===true?'up':idx.up===false?'down':'');
-            }
-          }
-        });
-        if (statusEl) statusEl.textContent = '✅ 已更新 ' + timeStr;
-      } else {
-        if (statusEl) statusEl.textContent = '⚠️ 暂无数据';
-        if (!silent) alert('暂无实时行情数据，请稍后重试。');
-      }
-    }
-
-    // 3秒超时
-    const timeout = setTimeout(() => {
-      cleanup();
-      if (statusEl) statusEl.textContent = '⚠️ 获取超时';
-      if (!silent) alert('获取实时行情超时，请检查网络连接。');
-      resolve();
-    }, 8000);
-
-    // 创建 script 标签加载新浪 API
     const script = document.createElement('script');
+    script.id = 'sina-live-script';
     script.src = `https://hq.sinajs.cn/list=${codes.join(',')}`;
     script.charset = 'gb2312';
+
+    let resolved = false;
+    const done = (success, data) => {
+      if (resolved) return;
+      resolved = true;
+      resolve({ success, data });
+    };
+
+    // 给脚本一点时间执行
+    const checkData = () => {
+      const parsed = {};
+      let any = false;
+      codes.forEach(code => {
+        const raw = window['hq_str_' + code];
+        if (raw && raw !== '') {
+          const parts = raw.split(',');
+          if (parts.length >= 4) {
+            parsed[code] = {
+              name: parts[0],
+              prevClose: parseFloat(parts[2]),
+              price: parseFloat(parts[3]),
+            };
+            any = true;
+          }
+        }
+      });
+      if (any) done(true, parsed);
+      else done(false, null);
+    };
+
     script.onload = function() {
-      clearTimeout(timeout);
-      parseSinaData();
-      cleanup();
-      resolve();
+      setTimeout(checkData, 500);
     };
     script.onerror = function() {
-      clearTimeout(timeout);
-      cleanup();
-      if (statusEl) statusEl.textContent = '⚠️ 获取失败';
-      if (!silent) alert('获取实时行情失败，请检查网络连接。');
-      resolve();
+      done(false, null);
     };
+
+    // 5秒超时
+    setTimeout(() => done(false, null), 5000);
+
     document.head.appendChild(script);
   });
+}
+
+function updateIndicesDisplay(parsedData, statusEl) {
+  const d = Store.get('review', viewingDate);
+  if (!d) return;
+
+  let anyUpdated = false;
+  d.indices.forEach(idx => {
+    const data = parsedData[idx.code];
+    if (!data) return;
+    const price = data.price;
+    const prevClose = data.prevClose;
+    if (price && prevClose && !isNaN(price) && !isNaN(prevClose) && prevClose > 0) {
+      const change = price - prevClose;
+      const pct = ((change / prevClose) * 100).toFixed(2);
+      idx.value = price.toFixed(2);
+      idx.change = (change >= 0 ? '+' : '') + change.toFixed(2);
+      idx.pct = (change >= 0 ? '+' : '') + pct + '%';
+      idx.up = change > 0 ? true : change < 0 ? false : null;
+      idx.name = data.name || idx.name;
+      anyUpdated = true;
+    }
+  });
+
+  if (anyUpdated) {
+    const upCount = d.indices.filter(i => i.up === true).length;
+    const downCount = d.indices.filter(i => i.up === false).length;
+    const now = new Date();
+    const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+    d.summary = `${upCount}涨${downCount}跌 · 更新时间 ${timeStr}`;
+    d._liveTime = timeStr;
+    Store.set('review', viewingDate, d);
+
+    // 更新 DOM
+    d.indices.forEach(idx => {
+      const el = document.getElementById('idx_' + idx.code);
+      if (el) {
+        const valueEl = el.querySelector('.value');
+        const changeEl = el.querySelector('.change');
+        if (valueEl) valueEl.textContent = idx.value;
+        if (changeEl) {
+          changeEl.textContent = (idx.up===true?'▲':idx.up===false?'▼':idx.up===null?'—':'') + ' ' + idx.change + ' (' + idx.pct + ')';
+          changeEl.className = 'change ' + (idx.up===true?'up':idx.up===false?'down':'');
+        }
+      }
+    });
+    if (statusEl) statusEl.textContent = '✅ 已更新 ' + timeStr;
+  } else {
+    if (statusEl) statusEl.textContent = '⚠️ 暂无数据';
+  }
 }
 
 // ===================== OVERVIEW =====================

@@ -400,7 +400,7 @@ const Generators = {
   },
 
   review(date) {
-    return { indices:[
+    return { _v:2, indices:[
       { name:"科创50", value:"--", change:"--", pct:"--", up:null, code:"sh000688" },
       { name:"半导体材料设备", value:"--", change:"--", pct:"--", up:null, code:"sz399395" },
       { name:"科创芯片设计", value:"--", change:"--", pct:"--", up:null, code:"sh950162" },
@@ -432,6 +432,8 @@ function goBack() { viewingDate = currentDate; switchPage(currentPage); }
 function renderPage(page, date) {
   const el = document.getElementById('content');
   let data = Store.get(page, date);
+  // 版本检查：review 数据需要 _v:2，旧版本强制重新生成
+  if (page === 'review' && data && data._v !== 2) { data = null; }
   if (!data && Generators[page]) { data = Generators[page](date); Store.set(page, date, data); }
   const isHistory = date !== currentDate;
   const readonly = isHistory;
@@ -800,33 +802,42 @@ async function fetchLiveIndices(silent) {
   const statusEl = document.getElementById('liveStatus');
   if (statusEl) statusEl.textContent = '⏳ 获取中...';
 
-  // 新浪财经实时行情 API: 科创50(sh000688), 半导体材料设备(sz399395), 科创芯片设计(sh950162), 科创芯片ETF天弘(sh588293)
+  // 使用 JSONP 绕过跨域限制
   const codes = ['sh000688','sz399395','sh950162','sh588293'];
-  try {
-    const resp = await fetch(`https://hq.sinajs.cn/list=${codes.join(',')}`, {
-      headers: { 'Referer': 'https://finance.sina.com.cn' }
-    });
-    const text = await resp.text();
+  const callbackName = 'sinaCallback_' + Date.now();
 
-    const d = Store.get('review', viewingDate);
-    if (!d) return;
+  return new Promise((resolve) => {
+    window[callbackName] = function() {
+      // 新浪 API 不返回 JSONP，而是直接写入全局变量 hq_str_xxx
+      // 所以我们通过 script 标签加载后读取这些变量
+      cleanup();
+      parseSinaData();
+      resolve();
+    };
 
-    codes.forEach((code, i) => {
-      const idx = d.indices[i];
-      if (!idx) return;
-      // 解析新浪数据格式: var hq_str_xxx="名称,今开,昨收,现价,最高,最低,..."
-      const regex = new RegExp(`hq_str_${code}="([^"]*)"`);
-      const match = text.match(regex);
-      if (match && match[1]) {
-        const parts = match[1].split(',');
+    function cleanup() {
+      delete window[callbackName];
+      if (script && script.parentNode) script.parentNode.removeChild(script);
+    }
+
+    function parseSinaData() {
+      const d = Store.get('review', viewingDate);
+      if (!d) return;
+      let anyUpdated = false;
+
+      codes.forEach((code, i) => {
+        const idx = d.indices[i];
+        if (!idx) return;
+        const varName = 'hq_str_' + code;
+        const raw = window[varName];
+        if (!raw) return;
+        const parts = raw.split(',');
+        if (parts.length < 5) return;
         const name = parts[0];
-        const open = parseFloat(parts[1]);
         const prevClose = parseFloat(parts[2]);
         const price = parseFloat(parts[3]);
-        const high = parseFloat(parts[4]);
-        const low = parseFloat(parts[5]);
 
-        if (price && prevClose) {
+        if (price && prevClose && !isNaN(price) && !isNaN(prevClose)) {
           const change = price - prevClose;
           const pct = ((change / prevClose) * 100).toFixed(2);
           idx.value = price.toFixed(2);
@@ -834,40 +845,66 @@ async function fetchLiveIndices(silent) {
           idx.pct = (change >= 0 ? '+' : '') + pct + '%';
           idx.up = change > 0 ? true : change < 0 ? false : null;
           idx.name = name || idx.name;
+          anyUpdated = true;
         }
+      });
+
+      if (anyUpdated) {
+        const upCount = d.indices.filter(i => i.up === true).length;
+        const downCount = d.indices.filter(i => i.up === false).length;
+        const now = new Date();
+        const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
+        d.summary = `${upCount}涨${downCount}跌 · 更新时间 ${timeStr}`;
+        d._liveTime = timeStr;
+        Store.set('review', viewingDate, d);
+
+        // 更新 DOM
+        d.indices.forEach(idx => {
+          const el = document.getElementById('idx_' + idx.code);
+          if (el) {
+            const valueEl = el.querySelector('.value');
+            const changeEl = el.querySelector('.change');
+            if (valueEl) valueEl.textContent = idx.value;
+            if (changeEl) {
+              changeEl.textContent = (idx.up===true?'▲':idx.up===false?'▼':idx.up===null?'—':'') + ' ' + idx.change + ' (' + idx.pct + ')';
+              changeEl.className = 'change ' + (idx.up===true?'up':idx.up===false?'down':'');
+            }
+          }
+        });
+        if (statusEl) statusEl.textContent = '✅ 已更新 ' + timeStr;
+      } else {
+        if (statusEl) statusEl.textContent = '⚠️ 暂无数据';
+        if (!silent) alert('暂无实时行情数据，请稍后重试。');
       }
-    });
+    }
 
-    // 更新汇总
-    const upCount = d.indices.filter(i => i.up === true).length;
-    const downCount = d.indices.filter(i => i.up === false).length;
-    const now = new Date();
-    const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}:${now.getSeconds().toString().padStart(2,'0')}`;
-    d.summary = `${upCount}涨${downCount}跌 · 更新时间 ${timeStr}`;
-    d._liveTime = timeStr;
+    // 3秒超时
+    const timeout = setTimeout(() => {
+      cleanup();
+      if (statusEl) statusEl.textContent = '⚠️ 获取超时';
+      if (!silent) alert('获取实时行情超时，请检查网络连接。');
+      resolve();
+    }, 8000);
 
-    Store.set('review', viewingDate, d);
-
-    // 更新 DOM 中的指数卡片
-    d.indices.forEach(idx => {
-      const el = document.getElementById('idx_' + idx.code);
-      if (el) {
-        const valueEl = el.querySelector('.value');
-        const changeEl = el.querySelector('.change');
-        if (valueEl) valueEl.textContent = idx.value;
-        if (changeEl) {
-          changeEl.textContent = (idx.up===true?'▲':idx.up===false?'▼':idx.up===null?'—':'') + ' ' + idx.change + ' (' + idx.pct + ')';
-          changeEl.className = 'change ' + (idx.up===true?'up':idx.up===false?'down':'');
-        }
-      }
-    });
-
-    if (statusEl) statusEl.textContent = '✅ 已更新 ' + timeStr;
-  } catch(e) {
-    console.error('获取实时行情失败:', e);
-    if (statusEl) statusEl.textContent = '⚠️ 获取失败，请稍后重试';
-    if (!silent) alert('获取实时行情失败，请检查网络连接。');
-  }
+    // 创建 script 标签加载新浪 API
+    const script = document.createElement('script');
+    script.src = `https://hq.sinajs.cn/list=${codes.join(',')}`;
+    script.charset = 'gb2312';
+    script.onload = function() {
+      clearTimeout(timeout);
+      parseSinaData();
+      cleanup();
+      resolve();
+    };
+    script.onerror = function() {
+      clearTimeout(timeout);
+      cleanup();
+      if (statusEl) statusEl.textContent = '⚠️ 获取失败';
+      if (!silent) alert('获取实时行情失败，请检查网络连接。');
+      resolve();
+    };
+    document.head.appendChild(script);
+  });
 }
 
 // ===================== OVERVIEW =====================

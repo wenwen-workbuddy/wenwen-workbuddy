@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>文文的成长工作台</title>
+<style>
+:root {
+  --bg: #f0eef5; --card: #ffffff; --text: #3d3d5c; --text2: #6b6b8a; --text3: #9a9ab3;
+  --border: #e8e4f0; --primary: #9b8ec7; --primaryDark: #7a6db0; --primaryLight: #f0ecfa;
+  --success: #7bc8a0; --danger: #e8919c; --warning: #f0c674; --info: #8ecae6;
+  --radius: 20px; --radiusSm: 14px; --shadow: 0 4px 16px rgba(155,142,199,0.12);
+  --shadowHover: 0 6px 24px rgba(155,142,199,0.18);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);overflow:hidden;}
+
+/* ===== Layout ===== */
+.app{display:flex;height:100vh;width:100vw;}
+
+/* Sidebar */
+.sidebar{width:72px;background:var(--card);border-right:1px solid var(--border);display:flex;flex-direction:column;align-items:center;padding:14px 0;flex-shrink:0;z-index:10;overflow-y:auto;gap:8px;}
+.sidebar::-webkit-scrollbar{display:none;}
+.sidebar .logo{width:44px;height:44px;border-radius:14px;background:linear-gradient(135deg,var(--primary),#c4b8e0);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:10px;flex-shrink:0;box-shadow:0 2px 8px rgba(155,142,199,0.3);}
+.sidebar .nav-item{width:54px;height:54px;border-radius:var(--radiusSm);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;transition:all .2s;position:relative;color:var(--text3);font-size:9px;flex-shrink:0;}
+.sidebar .nav-item .icon{font-size:20px;}
+.sidebar .nav-item.active{background:var(--primaryLight);color:var(--primaryDark);font-weight:600;}
+.sidebar .nav-item .badge{position:absolute;top:2px;right:2px;min-width:15px;height:15px;border-radius:8px;background:var(--danger);color:#fff;font-size:9px;display:flex;align-items:center;justify-content:center;padding:0 3px;font-weight:600;}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative;}
+.header{height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:var(--card);border-bottom:1px solid var(--border);flex-shrink:0;}
+.header .back{width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--text2);cursor:pointer;}
+.header h1{font-size:17px;font-weight:600;}
+.header .date{font-size:13px;color:var(--text3);}
+.content{flex:1;overflow-y:auto;padding:14px 16px;-webkit-overflow-scrolling:touch;}
+.content::-webkit-scrollbar{display:none;}
+
+/* ===== Hero Card ===== */
+.hero-card{background:linear-gradient(135deg,#b8a9d9,#9b8ec7);border-radius:var(--radius);padding:20px 18px;margin-bottom:16px;color:#fff;box-shadow:var(--shadow);position:relative;overflow:hidden;}
+.hero-card::before{content:"🌸";position:absolute;right:14px;top:14px;font-size:28px;opacity:.5;}
+.hero-card::after{content:"✨";position:absolute;right:50px;bottom:10px;font-size:18px;opacity:.4;}
+.hero-card .hero-title{font-size:20px;font-weight:700;margin-bottom:8px;}
+.hero-card .hero-date{font-size:13px;opacity:.9;margin-bottom:12px;}
+.hero-card .hero-progress{display:flex;align-items:center;gap:10px;}
+.hero-card .hero-progress-bar{flex:1;height:6px;background:rgba(255,255,255,.3);border-radius:3px;overflow:hidden;}
+.hero-card .hero-progress-bar .fill{height:100%;background:#fff;border-radius:3px;transition:width .4s;}
+.hero-card .hero-progress-text{font-size:13px;font-weight:600;}
+
+/* ===== Cards ===== */
+.card{background:var(--card);border-radius:var(--radius);padding:16px 18px;margin-bottom:14px;box-shadow:var(--shadow);border:1px solid var(--border);}
+.card-title{font-size:15px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.card-title .icon{font-size:18px;}
+
+/* ===== Task Items ===== */
+.task-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border);}
+.task-item:last-child{border-bottom:none;padding-bottom:0;}
+.task-item:first-child{padding-top:0;}
+.task-check{width:22px;height:22px;border-radius:50%;border:2.5px solid var(--border);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;background:#fff;}
+.task-check.done{background:var(--success);border-color:var(--success);}
+.task-check.done::after{content:"✓";color:#fff;font-size:11px;font-weight:700;}
+.task-text{flex:1;font-size:14px;line-height:1.5;transition:all .15s;}
+.task-text.done{text-decoration:line-through;color:var(--text3);}
+.task-tag{font-size:11px;padding:3px 10px;border-radius:10px;background:var(--primaryLight);color:var(--primaryDark);flex-shrink:0;font-weight:500;}
+
+/* ===== Buttons ===== */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:4px;padding:8px 16px;border-radius:var(--radiusSm);font-size:13px;font-weight:500;border:none;cursor:pointer;transition:all .15s;}
+.btn-primary{background:var(--primary);color:#fff;}
+.btn-ghost{background:var(--primaryLight);color:var(--primaryDark);}
+.btn-outline{background:transparent;border:1.5px solid var(--border);color:var(--text2);}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.btn-block{width:100%;}
+.btn-danger{background:var(--danger);color:#fff;}
+
+/* ===== Input ===== */
+.input{width:100%;padding:10px 14px;border:1.5px solid var(--border);border-radius:var(--radiusSm);font-size:14px;background:var(--card);outline:none;transition:border .15s;color:var(--text);}
+.input:focus{border-color:var(--primary);}
+textarea.input{min-height:80px;resize:vertical;}
+
+/* ===== Market Cards ===== */
+.market-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.market-item{background:var(--card);border-radius:var(--radiusSm);padding:12px;border:1.5px solid var(--border);}
+.market-item .name{font-size:12px;color:var(--text3);margin-bottom:4px;}
+.market-item .value{font-size:18px;font-weight:700;}
+.market-item .change{font-size:13px;margin-top:2px;font-weight:500;}
+.market-item .change.up{color:var(--danger);}
+.market-item .change.down{color:var(--success);}
+
+/* ===== News List ===== */
+.news-item{padding:12px 0;border-bottom:1px solid var(--border);}
+.news-item:last-child{border-bottom:none;}
+.news-item .title{font-size:14px;font-weight:500;line-height:1.5;margin-bottom:4px;}
+.news-item .meta{font-size:12px;color:var(--text3);display:flex;gap:8px;flex-wrap:wrap;}
+.news-item .tag{padding:1px 8px;border-radius:8px;background:var(--primaryLight);color:var(--primaryDark);font-size:11px;font-weight:500;}
+
+/* ===== FAB ===== */
+.fab{position:fixed;bottom:20px;right:14px;width:56px;height:56px;border-radius:50%;background:linear-gradient(135deg,var(--primary),#c4b8e0);color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 4px 16px rgba(155,142,199,0.4);cursor:pointer;z-index:100;border:none;transition:transform .15s;}
+.fab:active{transform:scale(0.92);}
+
+/* ===== Modal ===== */
+.modal-overlay{position:fixed;inset:0;background:rgba(61,61,92,0.35);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;}
+.modal-overlay.show{opacity:1;pointer-events:auto;}
+.modal{background:var(--card);border-radius:var(--radius) var(--radius) 0 0;width:100%;max-height:85vh;overflow-y:auto;padding:18px;transform:translateY(100%);transition:transform .25s ease-out;}
+.modal-overlay.show .modal{transform:translateY(0);}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.modal-header h2{font-size:17px;font-weight:600;}
+.modal-header .close{width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--text2);cursor:pointer;}
+
+/* ===== Overview ===== */
+.overview-section{margin-bottom:16px;}
+.overview-section .section-title{font-size:14px;font-weight:600;color:var(--primaryDark);margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+.overview-section .progress-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin-bottom:8px;}
+.overview-section .progress-bar .fill{height:100%;background:linear-gradient(90deg,var(--primary),#c4b8e0);border-radius:3px;transition:width .3s;}
+.overview-section .summary{font-size:13px;color:var(--text2);line-height:1.6;}
+
+/* ===== Date Picker ===== */
+.date-picker{display:flex;gap:8px;overflow-x:auto;padding:4px 0;margin-bottom:12px;}
+.date-picker::-webkit-scrollbar{display:none;}
+.date-chip{flex-shrink:0;padding:6px 14px;border-radius:20px;border:1.5px solid var(--border);font-size:13px;cursor:pointer;background:var(--card);transition:all .15s;}
+.date-chip.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+
+/* ===== Month Picker ===== */
+.month-picker{display:flex;gap:6px;overflow-x:auto;padding:4px 0;margin-bottom:12px;}
+.month-picker::-webkit-scrollbar{display:none;}
+.month-chip{flex-shrink:0;padding:6px 12px;border-radius:16px;border:1.5px solid var(--border);font-size:12px;cursor:pointer;background:var(--card);transition:all .15s;}
+.month-chip.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+
+/* ===== Section Divider ===== */
+.section-divider{display:flex;align-items:center;gap:10px;margin:16px 0 12px;font-size:13px;color:var(--text3);font-weight:500;}
+.section-divider::before,.section-divider::after{content:"";flex:1;height:1px;background:var(--border);}
+
+/* ===== Add Row ===== */
+.add-row{display:flex;gap:8px;margin-top:10px;}
+.add-row .input{flex:1;}
+
+/* ===== Empty State ===== */
+.empty{text-align:center;padding:40px 20px;color:var(--text3);font-size:14px;}
+.empty .icon{font-size:40px;margin-bottom:8px;display:block;}
+
+/* ===== Note Box ===== */
+.note-box{background:#fef9f0;border-left:3px solid var(--warning);padding:10px 12px;border-radius:0 var(--radiusSm) var(--radiusSm) 0;font-size:13px;color:var(--text2);margin-top:8px;}
+
+/* ===== Video Card ===== */
+.video-card{background:var(--card);border-radius:var(--radius);margin-bottom:14px;overflow:hidden;box-shadow:var(--shadow);border-left:3px solid var(--danger);border:1.5px solid var(--border);}
+.video-card .v-header{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);}
+.video-card .v-title{font-weight:600;font-size:14px;flex:1;padding-right:8px;}
+.video-card .v-heat{font-size:12px;color:var(--danger);font-weight:600;flex-shrink:0;}
+.video-card .v-author{font-size:11px;color:var(--text3);}
+.video-card .v-info-card{padding:12px 16px;border-bottom:1px solid var(--border);}
+.video-card .v-info-card:last-child{border-bottom:none;}
+.video-card .v-info-title{font-size:13px;font-weight:600;margin-bottom:6px;color:var(--primaryDark);display:flex;align-items:center;gap:4px;}
+.video-card .v-info-item{font-size:12px;color:var(--text2);line-height:1.7;padding:3px 0;display:flex;gap:6px;}
+.video-card .v-info-item .bullet{color:var(--primary);flex-shrink:0;}
+.video-card .v-link{padding:10px 16px;text-align:center;border-top:1px solid var(--border);}
+.video-card .v-link a{color:var(--primaryDark);font-size:13px;text-decoration:none;font-weight:500;}
+
+/* ===== Finance News ===== */
+.finance-news-item{padding:14px 0;border-bottom:1px solid var(--border);}
+.finance-news-item:last-child{border-bottom:none;}
+.finance-news-item .fn-title{font-size:14px;font-weight:600;line-height:1.5;margin-bottom:6px;}
+.finance-news-item .fn-source{font-size:11px;color:var(--text3);margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+.finance-news-item .fn-impact{padding:8px 12px;border-radius:10px;font-size:12px;line-height:1.6;margin-bottom:6px;}
+.fn-impact.positive{background:#f0fdf4;color:#065f46;border-left:3px solid var(--success);}
+.fn-impact.negative{background:#fef2f2;color:#991b1b;border-left:3px solid var(--danger);}
+.fn-impact.neutral{background:#f8fafc;color:#475569;border-left:3px solid var(--text3);}
+.fn-note-toggle{font-size:12px;color:var(--primaryDark);cursor:pointer;margin-top:4px;display:inline-block;}
+.fn-note-area{margin-top:8px;display:none;}
+.fn-note-area.open{display:block;}
+.fn-priority-badge{font-size:10px;padding:2px 8px;border-radius:8px;font-weight:600;}
+.fn-priority-badge.high{background:#fef2f2;color:var(--danger);}
+.fn-priority-badge.mid{background:#fef9f0;color:var(--warning);}
+.fn-priority-badge.low{background:#f8fafc;color:var(--text3);}
+
+/* ===== Review Template ===== */
+.review-section-card{background:var(--card);border-radius:var(--radius);padding:16px 18px;margin-bottom:14px;box-shadow:var(--shadow);border:1.5px solid var(--border);}
+.review-section-card .rs-title{font-size:14px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.review-section-card textarea.input{min-height:60px;}
+.review-section-card .field-row{display:flex;gap:8px;margin-bottom:8px;}
+.review-section-card .field-row .input{flex:1;}
+.review-section-card .field-label{font-size:12px;color:var(--text3);margin-bottom:4px;}
+
+/* ===== Savings ===== */
+.savings-overview{background:linear-gradient(135deg,#b8a9d9,#9b8ec7);border-radius:var(--radius);padding:18px;margin-bottom:14px;color:#fff;box-shadow:var(--shadow);position:relative;overflow:hidden;}
+.savings-overview::before{content:"💰";position:absolute;right:14px;top:10px;font-size:32px;opacity:.3;}
+.savings-overview .so-row{display:flex;justify-content:space-between;margin-bottom:10px;}
+.savings-overview .so-label{font-size:12px;opacity:.85;}
+.savings-overview .so-value{font-size:20px;font-weight:700;}
+.savings-overview .so-goal{font-size:13px;opacity:.9;}
+.savings-progress{height:8px;background:rgba(255,255,255,.3);border-radius:4px;margin:12px 0 4px;overflow:hidden;}
+.savings-progress .fill{height:100%;background:#fff;border-radius:4px;transition:width .4s;}
+.savings-gap{font-size:12px;opacity:.85;text-align:right;}
+.expense-item{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);}
+.expense-item:last-child{border-bottom:none;}
+.expense-item .exp-cat{font-size:11px;padding:3px 10px;border-radius:10px;font-weight:500;}
+.exp-cat.food{background:#fef3c7;color:#b45309;}
+.exp-cat.shopping{background:#fce7f3;color:#be185d;}
+.exp-cat.transport{background:#e0e7ff;color:#4338ca;}
+.exp-cat.home{background:#d1fae5;color:#065f46;}
+.exp-cat.other{background:#f1f5f9;color:#475569;}
+.expense-item .exp-name{flex:1;font-size:14px;margin:0 10px;}
+.expense-item .exp-amt{font-weight:600;color:var(--danger);}
+.expense-item .deposit-amt{font-weight:600;color:var(--success);}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px;}
+.stat-box{background:var(--card);border-radius:var(--radiusSm);padding:12px;text-align:center;border:1.5px solid var(--border);}
+.stat-box .stat-label{font-size:11px;color:var(--text3);margin-bottom:4px;}
+.stat-box .stat-value{font-size:16px;font-weight:700;}
+.stat-box .stat-value.red{color:var(--danger);}
+.stat-box .stat-value.green{color:var(--success);}
+.stat-box .stat-value.primary{color:var(--primaryDark);}
+
+/* ===== Routine ===== */
+.routine-period{margin-bottom:18px;}
+.routine-period .rp-header{font-size:14px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.routine-period .rp-time{font-size:12px;color:var(--text3);font-weight:400;}
+.routine-task{padding:10px 0;border-bottom:1px solid var(--border);}
+.routine-task:last-child{border-bottom:none;}
+.routine-task .rt-row{display:flex;align-items:center;gap:10px;}
+.routine-task .rt-time{font-size:11px;color:var(--text3);width:42px;flex-shrink:0;}
+.routine-task .rt-text{flex:1;font-size:13px;line-height:1.4;}
+.routine-task .rt-tag{font-size:10px;padding:2px 8px;border-radius:8px;background:var(--primaryLight);color:var(--primaryDark);flex-shrink:0;margin-left:4px;font-weight:500;}
+.week-chart{display:flex;align-items:flex-end;gap:8px;height:100px;padding:0 4px;}
+.week-chart .bar-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;}
+.week-chart .bar{width:100%;border-radius:8px 8px 0 0;background:var(--primary);transition:height .4s;min-height:4px;max-height:88px;}
+.week-chart .bar-label{font-size:10px;color:var(--text3);}
+.week-chart .bar-pct{font-size:10px;color:var(--primaryDark);font-weight:600;}
+
+/* ===== Responsive ===== */
+@media(min-width:768px){body{max-width:430px;margin:0 auto;border-left:1px solid var(--border);border-right:1px solid var(--border);}.fab{right:calc(50% - 195px);}}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="sidebar">
+    <div class="logo">🐱</div>
+    <div class="nav-item active" data-page="plan" onclick="switchPage('plan')"><span class="icon">📋</span><span>计划</span></div>
+    <div class="nav-item" data-page="videos" onclick="switchPage('videos')"><span class="icon">🎬</span><span>爆款</span><span class="badge">3</span></div>
+    <div class="nav-item" data-page="hot" onclick="switchPage('hot')"><span class="icon">🔥</span><span>灵感</span></div>
+    <div class="nav-item" data-page="finnews" onclick="switchPage('finnews')"><span class="icon">💹</span><span>财经</span><span class="badge">7</span></div>
+    <div class="nav-item" data-page="review" onclick="switchPage('review')"><span class="icon">📈</span><span>复盘</span></div>
+    <div class="nav-item" data-page="savings" onclick="switchPage('savings')"><span class="icon">🐷</span><span>存钱</span></div>
+    <div class="nav-item" data-page="routine" onclick="switchPage('routine')"><span class="icon">🏠</span><span>作息</span></div>
+  </nav>
+  <div class="main">
+    <div class="header">
+      <div class="back" onclick="goBack()" id="backBtn" style="visibility:hidden">‹</div>
+      <h1 id="pageTitle">每日计划</h1>
+      <div class="date" id="headerDate"></div>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<button class="fab" onclick="openOverview()">🌸</button>
+
+<div class="modal-overlay" id="overviewModal" onclick="closeOverview(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header"><h2>🌸 今日总览</h2><div class="close" onclick="closeOverview()">✕</div></div>
+    <div id="overviewContent"></div>
+  </div>
+</div>
+
+<script>
+// ===================== DATA STORE =====================
+const Store = {
+  key: (type, date) => `wb_${type}_${date}`,
+  today: () => new Date().toISOString().slice(0,10),
+  get(type, date) { const r = localStorage.getItem(this.key(type, date)); return r ? JSON.parse(r) : null; },
+  set(type, date, data) { localStorage.setItem(this.key(type, date), JSON.stringify(data)); },
+  getDates(type) {
+    const dates = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(`wb_${type}_`)) dates.push(k.replace(`wb_${type}_`, ''));
+    }
+    return dates.sort().reverse();
+  }
+};
+
+// ===================== GENERATORS =====================
+const Generators = {
+  plan(date) {
+    return {
+      tasks: [
+        { id:1, text:"构思今日1条枕头/家居好物文案主题", done:false, tag:"文案",
+          detail:{
+            title:"今日文案主题：换了枕头才知道以前白睡了",
+            script:[
+              "【开头钩子（0-3秒）】镜头对准旧枕头，旁白：'你家枕头用了几年了？看到这个颜色你还敢睡吗？'",
+              "【痛点引入（3-8秒）】展示旧枕头发黄、变形的画面，旁白：'脖子酸、睡不好、越睡越累……可能不是你身体的问题，是枕头该换了。'",
+              "【产品展示（8-15秒）】拿起新枕头按压回弹，旁白：'换了这个枕头第一天，脖子不酸了，整个人像被托住一样，才知道以前白睡了。'",
+              "【使用对比（15-25秒）】分屏对比旧枕头vs新枕头睡眠姿势，旁白：'左边塌陷严重，右边稳稳托住颈椎，差别一眼就能看出来。'",
+              "【引导转化（25-30秒）】展示产品细节+价格标签，旁白：'不到一杯奶茶钱，枕头这东西真的不能将就。链接在主页，先到先得。'"
+            ],
+            tips:[
+              "文案口语化，像和朋友聊天，不要播音腔",
+              "多用'你'拉近距离，少用'我们''大家'",
+              "价格用生活化的参照物（奶茶、外卖）对比",
+              "结尾制造紧迫感：先到先得/限时/少量库存"
+            ]
+          }
+        },
+        { id:2, text:"用手机拍摄3-5张产品/场景素材图", done:false, tag:"拍摄",
+          detail:{
+            title:"今日拍摄清单：5张素材图",
+            shots:[
+              { name:"产品正面平铺图", desc:"枕头放在床上，旁边放一本书/水杯做点缀，俯拍，自然光", tip:"窗边光线最好，避免阴影" },
+              { name:"按压回弹特写", desc:"手按压枕头展示回弹，连拍模式抓3-4张", tip:"侧面拍，能看到凹陷和回弹过程" },
+              { name:"睡眠场景模拟", desc:"枕头放在铺好的床上，旁边放睡衣/眼罩，营造入睡氛围", tip:"暖色台灯补光，画面温馨" },
+              { name:"新旧对比图", desc:"旧枕头和新枕头并排放，对比颜色、厚度、形状", tip:"同一角度俯拍，对比最直观" },
+              { name:"细节质感图", desc:"拉近拍枕头面料纹理、缝线、标签", tip:"手机微距模式，展示品质感" }
+            ],
+            cameraTips:[
+              "全程用手机后置摄像头，画质比前置好",
+              "拍摄前擦干净镜头，避免画面雾蒙蒙",
+              "点击屏幕对焦后上滑可调亮度，让枕头更白净",
+              "构图用九宫格参考线，产品放交叉点上"
+            ]
+          }
+        },
+        { id:3, text:"使用剪映快速剪辑1条15-30秒短视频", done:false, tag:"剪辑" },
+        { id:4, text:"选择最佳发布时间（早7-9点或晚8-10点）", done:false, tag:"发布" },
+        { id:5, text:"回复昨日视频评论区前10条留言", done:false, tag:"互动" },
+        { id:6, text:"浏览5个同赛道爆款视频，记录亮点", done:false, tag:"学习" },
+      ],
+      inspirations: [
+        { id:1, title:"枕头选购避坑指南", desc:"3分钟教你挑对枕头，告别颈椎酸痛", tags:["干货","科普"] },
+        { id:2, title:"租房党必看！百元内好睡枕头", desc:"学生/租房人群高性价比枕头推荐", tags:["平价","租房"] },
+        { id:3, title:"枕头用多久该换？", desc:"超期使用枕头的健康隐患，引发讨论", tags:["健康","话题"] },
+      ],
+      growth: [
+        { id:1, text:"关注3个枕头/家居领域对标账号", done:false },
+        { id:2, text:"分析1条近期爆款视频的结构", done:false },
+        { id:3, text:"优化个人主页简介和封面风格", done:false },
+      ],
+      _generated: true
+    };
+  },
+
+  videos(date) {
+    const list = [
+      { id:1, title:"宿舍党三十块枕头睡出五星级感觉", author:"@睡眠小达人（粉丝872）", heat:9876, platform:"抖音", likes:"2.3w", comments:"1.8k",
+        analysis:{ hook:"开头直接抛痛点'大学生买不起好枕头？'引发身份认同，前三秒留人率高", emotion:"抓住'穷但不想将就'的情绪，租房/宿舍人群强共鸣", twist:"前半段展示平价枕头 vs 后半段展示正确枕法后效果，视觉反差强", visual:"手机俯拍床上视角+自然光，无需专业设备，真实感强", copy:"文案用'别划走！第三个方法最省钱'制造悬念，引导完播", comment:"评论区置顶'链接在主页'引导私域，回复'求链接'评论促互动" },
+        apply:{ shoot:"手机固定支架俯拍床铺，自然光+台灯补光，无需专业布景", props:"平价枕头（50元内）+ 旧床单做背景 + 手机原相机", script:"'是不是觉得好枕头都贵？其实换个用法，30块的枕头也能睡出五星级感'", edit:"剪映一键成片：开头加速→慢动作展示细节→结尾文字引导关注" }, link:"https://www.douyin.com" },
+      { id:2, title:"睡了三个月乳胶枕的真实感受", author:"@租房改造小陈（粉丝1.2k）", heat:8720, platform:"小红书", likes:"1.8w", comments:"2.3k",
+        analysis:{ hook:"封面图：发黄的旧枕头 vs 新乳胶枕对比，视觉冲击力强", emotion:"'终于换掉了睡了五年的枕头'引发拖延换枕的共鸣", twist:"先吐槽乳胶枕贵→实际使用三个月后真香→价格其实不贵", visual:"展示枕头回弹测试+睡眠姿势对比，可视化效果直观", copy:"'三个月后我后悔了……后悔没早点换'反转型文案", comment:"引导投票'你们枕头用了几年？'激发评论区UGC" },
+        apply:{ shoot:"拍摄枕头回弹测试（按压→松开→慢动作回弹），手机即可完成", props:"乳胶枕1个+旧枕头1个（对比用）+ 手机三脚架", script:"'你们的枕头用了几年？我睡了三个月乳胶枕，真实感受全在这里'", edit:"前后对比分屏剪辑→慢动作回弹特写→结尾引导评论互动" }, link:"https://www.xiaohongshu.com" },
+      { id:3, title:"酒店同款枕头平替只要十分之一", author:"@抠门好物挖掘机（粉丝563）", heat:7650, platform:"抖音", likes:"1.5w", comments:"980",
+        analysis:{ hook:"开头'住酒店发现枕头巨舒服，搜同款要800？我找到了80的平替'信息差制造好奇", emotion:"省钱+享受不冲突的观念击中价格敏感型用户", twist:"先展示酒店体验→揭示价格→找到平替→实测对比，层层递进", visual:"酒店实拍（可用出差/旅行素材）+ 平替拆箱对比，真实感强", copy:"'酒店同款1/10价格'数字对比+评论区引导讨论性价比", comment:"回复时分享关键词搜索方法，引导用户自己去搜，提升信任" },
+        apply:{ shoot:"出差/旅行时顺手拍酒店枕头→回家拍平替对比→无需额外场景", props:"手机+酒店枕头照片+网购平替枕头", script:"'住酒店发现枕头特别舒服，搜了一下同款要800……但我找到了80的平替'", edit:"剪映图文成片：酒店照片→平替拆箱→对比→价格标签动画" }, link:"https://www.douyin.com" }
+    ];
+    return { list, _generated: true };
+  },
+
+  finnews(date) {
+    const items = [
+      { id:1, title:"国家大基金三期注册资本3440亿元，重点投向半导体设备与材料领域", source:"财联社", time:"08:30", priority:"high", impactType:"positive", impact:"【对半导体/芯片基金影响】大基金三期明确倾斜设备与材料，直接利好半导体材料ETF、科创芯片ETF。设备国产替代逻辑进一步加强，短期板块情绪提振，中长期资金面改善。建议关注半导体材料设备基金加仓机会。" },
+      { id:2, title:"美国考虑进一步限制对华芯片设备出口，涉及光刻机零部件", source:"路透社", time:"07:15", priority:"high", impactType:"negative", impact:"【对半导体/芯片基金影响】外部制裁升级短期压制市场情绪，但国产替代紧迫性进一步提升。光刻机相关设备标的短期承压，但中长期国产设备替代逻辑反而强化。建议持仓观望，不急于减仓。" },
+      { id:3, title:"科创板芯片设计公司Q2业绩预告密集披露，多家预增超50%", source:"证券时报", time:"08:00", priority:"high", impactType:"positive", impact:"【对半导体/芯片基金影响】芯片设计板块业绩兑现验证行业景气回升，科创芯片ETF成分股有望受益。业绩超预期个股带动板块估值修复，建议关注科创芯片基金持仓比例调整机会。" },
+      { id:4, title:"央行今日开展2000亿元MLF操作，利率维持不变", source:"央行官网", time:"09:20", priority:"mid", impactType:"neutral", impact:"【对半导体/芯片基金影响】流动性维持合理充裕，对成长股板块偏正面。半导体作为高成长赛道对资金面敏感，宽松环境有利于板块估值支撑，但非直接催化剂。" },
+      { id:5, title:"AI芯片需求爆发，台积电先进封装产能持续满载", source:"经济日报", time:"08:45", priority:"high", impactType:"positive", impact:"【对半导体/芯片基金影响】AI芯片产业链持续高景气，先进封装环节供不应求。利好国内封测龙头及芯片设计公司，科创芯片ETF中AI芯片权重股有望持续受益。建议维持配置。" },
+      { id:6, title:"工信部：加快集成电路关键材料攻关，推进半导体材料国产化", source:"新华社", time:"07:50", priority:"high", impactType:"positive", impact:"【对半导体/芯片基金影响】政策端持续加码半导体材料国产化，硅片、光刻胶、电子气体等细分领域直接受益。半导体材料设备ETF长期逻辑明确，短期政策催化叠加，可关注逢低布局。" },
+      { id:7, title:"北向资金昨日净流出45亿元，半导体板块获逆势净买入", source:"证券时报", time:"08:10", priority:"mid", impactType:"positive", impact:"【对半导体/芯片基金影响】北向资金逆势加仓半导体，说明外资对板块中长期价值认可。短期市场波动中半导体展现韧性，科创芯片方向资金面信号偏积极。" }
+    ];
+    return { items, _generated: true };
+  },
+
+  dayreview(date) {
+    return { market:{ index:"", change:"", volume:"", emotion:"", note:"" }, sector:{ chipDesign:"", chipDesignChange:"", semiconMaterial:"", semiconMaterialChange:"", fundFlow:"", hotSpot:"" }, fund:{ holdings:"", profit:"", positionChange:"", operation:"" }, summary:"", _generated:true };
+  },
+
+  savings(date) {
+    return { goal: 50000, expenses: [], deposits: [], _generated: true };
+  },
+
+  routine(date) {
+    return {
+      tasks: [
+        { id:1, period:"morning", time:"08:30", text:"起床喝一杯温水，简单拉伸5分钟", tag:"健康", done:false },
+        { id:2, period:"morning", time:"09:00", text:"浏览枕头赛道昨日爆款视频（3条），记1个灵感", tag:"博主", done:false },
+        { id:3, period:"morning", time:"09:30", text:"构思今日1条枕头文案，用手机拍1-2张产品素材", tag:"博主", done:false },
+        { id:4, period:"afternoon", time:"13:00", text:"查看财经新闻，浏览半导体板块动态", tag:"基金", done:false },
+        { id:5, period:"afternoon", time:"14:00", text:"回复昨日评论区留言，维护账号互动", tag:"博主", done:false },
+        { id:6, period:"afternoon", time:"15:30", text:"收盘后填写基金复盘模板", tag:"基金", done:false },
+        { id:7, period:"evening", time:"19:00", text:"刷5个同赛道视频，记录1个可模仿的创意点", tag:"博主", done:false },
+        { id:8, period:"evening", time:"20:00", text:"发布今日短视频（或安排定时发布）", tag:"博主", done:false },
+        { id:9, period:"evening", time:"21:00", text:"浏览今日收支，记录存款进度", tag:"理财", done:false },
+        { id:10, period:"evening", time:"22:30", text:"简单复盘今日收支，记录存款进度", tag:"理财", done:false },
+        { id:11, period:"evening", time:"23:00", text:"放下手机，听轻音乐放松，准备入睡", tag:"放松", done:false },
+      ],
+      _generated: true
+    };
+  },
+
+  hot(date) {
+    return { ideas:[
+      { id:1, title:"枕头材质大PK：乳胶 vs 记忆棉 vs 羽绒", heat:"🔥🔥🔥", desc:"对比类内容易引发评论区站队互动" },
+      { id:2, title:"沉浸式换枕头 | ASMR助眠体验", heat:"🔥🔥", desc:"ASMR+家居结合，差异化内容方向" },
+      { id:3, title:"我妈说我的枕头像垃圾堆...", heat:"🔥🔥🔥🔥", desc:"剧情/吐槽类，强情绪共鸣点" },
+    ], _generated:true };
+  },
+
+  review(date) {
+    return { indices:[
+      { name:"上证指数", value:"--", change:"--", pct:"--", up:null }, { name:"深证成指", value:"--", change:"--", pct:"--", up:null },
+      { name:"创业板指", value:"--", change:"--", pct:"--", up:null }, { name:"沪深300", value:"--", change:"--", pct:"--", up:null },
+      { name:"科创50", value:"--", change:"--", pct:"--", up:null }, { name:"北证50", value:"--", change:"--", pct:"--", up:null },
+    ], summary:"市场数据待更新（交易日15:30后自动刷新）", sectors:"", funds:"", emotion:"", note:"", _generated:true };
+  }
+};
+
+// ===================== STATE =====================
+let currentPage = 'plan';
+let currentDate = Store.today();
+let viewingDate = currentDate;
+let savingsViewMonth = new Date().toISOString().slice(0,7);
+
+// ===================== NAVIGATION =====================
+function switchPage(page, date) {
+  currentPage = page;
+  viewingDate = date || currentDate;
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.page === page));
+  const titles = { plan:'每日计划', videos:'低粉爆款视频', hot:'爆款灵感', finnews:'财经重要新闻', review:'市场收盘', dayreview:'基金复盘', savings:'我的账户', routine:'居家作息' };
+  document.getElementById('pageTitle').textContent = titles[page] || page;
+  document.getElementById('backBtn').style.visibility = (date && date !== currentDate) ? 'visible' : 'hidden';
+  document.getElementById('headerDate').textContent = viewingDate;
+  renderPage(page, viewingDate);
+}
+function goBack() { viewingDate = currentDate; switchPage(currentPage); }
+
+// ===================== RENDERERS =====================
+function renderPage(page, date) {
+  const el = document.getElementById('content');
+  let data = Store.get(page, date);
+  if (!data && Generators[page]) { data = Generators[page](date); Store.set(page, date, data); }
+  const isHistory = date !== currentDate;
+  const readonly = isHistory;
+  switch(page) {
+    case 'plan': renderPlan(el, data, readonly, date); break;
+    case 'videos': renderVideos(el, data, readonly, date); break;
+    case 'hot': renderHot(el, data, readonly, date); break;
+    case 'finnews': renderFinNews(el, data, readonly, date); break;
+    case 'review': renderReview(el, data, readonly, date); break;
+    case 'dayreview': renderDayReview(el, data, readonly, date); break;
+    case 'savings': renderSavings(el, data, readonly, date); break;
+    case 'routine': renderRoutine(el, data, readonly, date); break;
+  }
+  if (isHistory) renderDatePicker(el, page, date);
+}
+function renderDatePicker(el, page, current) {
+  const dates = Store.getDates(page);
+  if (dates.length <= 1) return;
+  el.insertAdjacentHTML('afterbegin', `<div class="date-picker">${dates.map(d => `<div class="date-chip ${d===current?'active':''}" onclick="switchPage('${page}','${d}')">${d.slice(5)}</div>`).join('')}</div>`);
+}
+
+// ========== 板块1: 每日计划 ==========
+function renderPlan(el, data, readonly, date) {
+  const done = data.tasks.filter(t=>t.done).length;
+  const total = data.tasks.length;
+  const growthDone = data.growth.filter(t=>t.done).length;
+  const growthTotal = data.growth.length;
+  const weekDay = ['周日','周一','周二','周三','周四','周五','周六'][new Date(date).getDay()];
+
+  el.innerHTML = `
+    <div class="hero-card">
+      <div class="hero-title">文文的成长工作台</div>
+      <div class="hero-date">${date} ${weekDay}</div>
+      <div class="hero-progress">
+        <div class="hero-progress-text">${done+growthDone}/${total+growthTotal} 已完成</div>
+        <div class="hero-progress-bar"><div class="fill" style="width:${total+growthTotal?((done+growthDone)/(total+growthTotal)*100):0}%"></div></div>
+      </div>
+    </div>
+    <div class="card"><div class="card-title"><span class="icon">✅</span> 当日博主基础轻任务</div>
+      ${data.tasks.map(t => {
+        if (t.detail) {
+          return `<div class="task-item" style="flex-direction:column;align-items:stretch;">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div class="task-check ${t.done?'done':''}" ${readonly?'':'onclick="toggleTask(\'plan\',\'tasks\','+t.id+')"'}></div>
+              <div class="task-text ${t.done?'done':''}" style="flex:1;cursor:pointer;color:var(--primaryDark);font-weight:500;" onclick="toggleTaskDetail(${t.id})">${t.text}</div>
+              <div class="task-tag">${t.tag}</div>
+              <span style="font-size:12px;color:var(--primary);flex-shrink:0;cursor:pointer;" onclick="toggleTaskDetail(${t.id})" id="detailArrow_${t.id}">展开 ▾</span>
+            </div>
+            <div id="detail_${t.id}" style="display:none;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);">
+              ${renderTaskDetail(t.detail)}
+            </div>
+          </div>`;
+        }
+        return `<div class="task-item"><div class="task-check ${t.done?'done':''}" ${readonly?'':'onclick="toggleTask(\'plan\',\'tasks\','+t.id+')"'}></div><div class="task-text ${t.done?'done':''}">${t.text}</div><div class="task-tag">${t.tag}</div></div>`;
+      }).join('')}
+    </div>
+    <div class="card"><div class="card-title"><span class="icon">💡</span> 枕头赛道爆款创作灵感（3组）</div>
+      ${data.inspirations.map(i => `<div class="task-item" style="align-items:center;"><div style="flex:1;"><div style="font-weight:500;font-size:14px;margin-bottom:2px;">${i.title}</div><div style="font-size:12px;color:var(--text3);">${i.desc}</div></div><div style="display:flex;gap:4px;">${i.tags.map(t=>`<span class="task-tag">${t}</span>`).join('')}</div></div>`).join('')}
+    </div>
+    <div class="card"><div class="card-title"><span class="icon">📈</span> 账号成长进阶任务</div>
+      ${data.growth.map(t => `<div class="task-item"><div class="task-check ${t.done?'done':''}" ${readonly?'':'onclick="toggleTask(\'plan\',\'growth\','+t.id+')"'}></div><div class="task-text ${t.done?'done':''}">${t.text}</div></div>`).join('')}
+    </div>
+    ${readonly ? '<div class="note-box">📌 历史归档内容仅可查看，不可编辑</div>' : ''}`;
+}
+
+// 任务详情展开渲染
+function renderTaskDetail(detail) {
+  let html = '';
+  // 文案类型（有 script 数组）
+  if (detail.script) {
+    html += `<div style="font-size:13px;font-weight:600;color:var(--primaryDark);margin-bottom:8px;">📝 ${detail.title}</div>`;
+    html += detail.script.map((s, i) => `
+      <div style="background:var(--primaryLight);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:13px;line-height:1.6;color:var(--text);">
+        ${s}
+      </div>`).join('');
+    if (detail.tips) {
+      html += `<div style="font-size:12px;font-weight:600;color:var(--warning);margin-top:10px;margin-bottom:4px;">💡 文案小贴士</div>`;
+      html += detail.tips.map(t => `<div style="font-size:12px;color:var(--text2);line-height:1.7;padding:3px 0;display:flex;gap:6px;"><span>·</span><span>${t}</span></div>`).join('');
+    }
+  }
+  // 拍摄类型（有 shots 数组）
+  if (detail.shots) {
+    html += `<div style="font-size:13px;font-weight:600;color:var(--primaryDark);margin-bottom:8px;">📷 ${detail.title}</div>`;
+    html += detail.shots.map((s, i) => `
+      <div style="background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:10px 12px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+          <span style="width:20px;height:20px;border-radius:50%;background:var(--primary);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:600;flex-shrink:0;">${i+1}</span>
+          <span style="font-size:13px;font-weight:600;">${s.name}</span>
+        </div>
+        <div style="font-size:12px;color:var(--text2);line-height:1.6;padding-left:26px;">${s.desc}</div>
+        <div style="font-size:11px;color:var(--warning);padding-left:26px;margin-top:4px;">💡 ${s.tip}</div>
+      </div>`).join('');
+    if (detail.cameraTips) {
+      html += `<div style="font-size:12px;font-weight:600;color:var(--success);margin-top:10px;margin-bottom:4px;">📱 拍摄小贴士</div>`;
+      html += detail.cameraTips.map(t => `<div style="font-size:12px;color:var(--text2);line-height:1.7;padding:3px 0;display:flex;gap:6px;"><span>·</span><span>${t}</span></div>`).join('');
+    }
+  }
+  return html;
+}
+
+function toggleTaskDetail(id) {
+  const el = document.getElementById('detail_'+id);
+  const arrow = document.getElementById('detailArrow_'+id);
+  if (el.style.display === 'none') {
+    el.style.display = 'block';
+    arrow.textContent = '收起 ▴';
+  } else {
+    el.style.display = 'none';
+    arrow.textContent = '展开 ▾';
+  }
+}
+function renderVideos(el, data, readonly, date) {
+  const fh = n => n >= 10000 ? (n/10000).toFixed(1)+'w' : n;
+  el.innerHTML = `<div style="font-size:13px;color:var(--text3);margin-bottom:10px;">📡 近24h抖音+小红书低粉爆款 · 按热度排序 · ${data.list.length}条</div>
+    ${data.list.map(v => `<div class="video-card">
+      <div class="v-header"><div style="flex:1;"><div class="v-title">${v.title}</div><div class="v-author">${v.author} · ${v.platform}</div></div><div class="v-heat">🔥 ${fh(v.heat)}</div></div>
+      <div class="v-info-card"><div class="v-info-title">🔍 爆火核心拆解</div>
+        <div class="v-info-item"><span class="bullet">🎣</span><span><b>开头留人钩子：</b>${v.analysis.hook}</span></div>
+        <div class="v-info-item"><span class="bullet">💗</span><span><b>用户情绪共鸣：</b>${v.analysis.emotion}</span></div>
+        <div class="v-info-item"><span class="bullet">🔄</span><span><b>视频反转结构：</b>${v.analysis.twist}</span></div>
+        <div class="v-info-item"><span class="bullet">👁️</span><span><b>画面视觉亮点：</b>${v.analysis.visual}</span></div>
+        <div class="v-info-item"><span class="bullet">📝</span><span><b>带货文案转化：</b>${v.analysis.copy}</span></div>
+        <div class="v-info-item"><span class="bullet">💬</span><span><b>评论区引流：</b>${v.analysis.comment}</span></div>
+      </div>
+      <div class="v-info-card"><div class="v-info-title">💡 懒人可直接落地创作启发</div>
+        <div class="v-info-item"><span class="bullet">📷</span><span><b>拍摄思路：</b>${v.apply.shoot}</span></div>
+        <div class="v-info-item"><span class="bullet">🛠️</span><span><b>道具方案：</b>${v.apply.props}</span></div>
+        <div class="v-info-item"><span class="bullet">🎙️</span><span><b>口播文案：</b>${v.apply.script}</span></div>
+        <div class="v-info-item"><span class="bullet">✂️</span><span><b>剪辑步骤：</b>${v.apply.edit}</span></div>
+      </div>
+      <div class="v-link"><a href="${v.link}" target="_blank">📎 查看原视频 →</a></div>
+      <div style="padding:6px 16px;font-size:11px;color:var(--text3);display:flex;gap:12px;"><span>👍 ${v.likes}</span><span>💬 ${v.comments}</span></div>
+    </div>`).join('')}
+    ${readonly ? '<div class="note-box">📌 历史归档内容仅可查看，不可编辑</div>' : ''}`;
+}
+
+// ========== 板块3: 财经重要新闻 ==========
+function renderFinNews(el, data, readonly, date) {
+  const pl = { high:'高优先', mid:'中优先', low:'低优先' };
+  const il = { positive:'利好', negative:'利空', neutral:'中性' };
+  const ie = { positive:'🟢', negative:'🔴', neutral:'⚪' };
+  const sorted = [...data.items].sort((a,b) => ({high:0,mid:1,low:2})[a.priority] - ({high:0,mid:1,low:2})[b.priority]);
+  el.innerHTML = `<div style="font-size:13px;color:var(--text3);margin-bottom:10px;">🕐 每日8:50开盘前刷新 · 半导体材料设备+科创芯片设计 · ${data.items.length}条</div>
+    <div class="card">${sorted.map(item => `<div class="finance-news-item">
+      <div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:4px;"><span class="fn-priority-badge ${item.priority}">${pl[item.priority]}</span><div style="flex:1;"><div class="fn-title">${item.title}</div></div></div>
+      <div class="fn-source"><span>${item.source}</span><span>${item.time}</span><span>${ie[item.impactType]} ${il[item.impactType]}</span></div>
+      <div class="fn-impact ${item.impactType}">${item.impact}</div>
+      ${!readonly ? `<span class="fn-note-toggle" onclick="toggleFinNote(this,${item.id})">📝 ${item.userNote?'编辑批注':'添加批注'} ${item.userNote?'✓':''}</span><div class="fn-note-area" id="fnNote_${item.id}"><textarea class="input" onchange="saveFinNote(${item.id},this.value)" placeholder="记录个人分析...">${item.userNote||''}</textarea></div>` : (item.userNote ? `<div class="note-box">📝 ${item.userNote}</div>` : '')}
+    </div>`).join('')}</div>
+    ${readonly ? '<div class="note-box">📌 历史归档内容仅可查看，不可编辑</div>' : ''}`;
+}
+function toggleFinNote(el, id) { document.getElementById('fnNote_'+id).classList.toggle('open'); el.classList.toggle('open'); }
+function saveFinNote(id, val) { const d = Store.get('finnews', viewingDate); const it = d.items.find(x => x.id === id); if (it) { it.userNote = val; Store.set('finnews', viewingDate, d); } }
+
+// ========== 板块4: 每日股市基金复盘 ==========
+function renderDayReview(el, data, readonly, date) {
+  const d = data;
+  el.innerHTML = `
+    <div class="review-section-card"><div class="rs-title">📊 1. 当日大盘整体波动概况</div>
+      <div class="field-row"><div style="flex:1;"><div class="field-label">大盘指数涨跌</div><input class="input" value="${d.market.index||''}" ${readonly?'readonly':''} onchange="updateDayReviewField('market','index',this.value)" placeholder="例：上证+0.8%"></div><div style="flex:1;"><div class="field-label">成交量</div><input class="input" value="${d.market.volume||''}" ${readonly?'readonly':''} onchange="updateDayReviewField('market','volume',this.value)" placeholder="例：1.2万亿"></div></div>
+      <div class="field-row"><div style="flex:1;"><div class="field-label">涨跌幅度</div><input class="input" value="${d.market.change||''}" ${readonly?'readonly':''} onchange="updateDayReviewField('market','change',this.value)" placeholder="例：+25点"></div><div style="flex:1;"><div class="field-label">市场情绪</div><input class="input" value="${d.market.emotion||''}" ${readonly?'readonly':''} onchange="updateDayReviewField('market','emotion',this.value)" placeholder="例：偏乐观/谨慎"></div></div>
+      <div class="field-label">大盘概况备注</div><textarea class="input" ${readonly?'readonly':''} onchange="updateDayReviewField('market','note',this.value)" placeholder="自由记录...">${d.market.note||''}</textarea>
+    </div>
+    <div class="review-section-card"><div class="rs-title">🔬 2. 半导体/芯片重点行业板块行情</div>
+      <div class="field-row"><div style="flex:1;"><div class="field-label">科创芯片涨跌</div><input class="input" value="${d.sector.chipDesign||''}" ${readonly?'readonly':''} onchange="updateDayReviewField('sector','chipDesign',this.value)" placeholder="例：+2.3%"></div><div style="flex:1;"><div class="field-label">涨跌点数</div><input class="input" value="${d.sector.chipDesignChange||''}" ${readonly?'readonly':''} onchange="updateDayReviewField('sector','chipDesignChange',this.value)" placeholder="例：+45点"></div></div>
+      <div class="field-row"><div style="flex:1;"><div class="field-label">半导体材料设备涨跌</div><input class="input" value="${d.sector.semiconMaterial||''}" ${readonly?'readonly':''} onchange="updateDayReviewField('sector','semiconMaterial',this.value)" placeholder="例：+1.8%"></div><div style="flex:1;"><div class="field-label">涨跌点数</div><input class="input" value="${d.sector.semiconMaterialChange||''}" ${readonly?'readonly':''} onchange="updateDayReviewField('sector','semiconMaterialChange',this.value)" placeholder="例：+32点"></div></div>
+      <div class="field-label">资金流入流出</div><input class="input" value="${d.sector.fundFlow||''}" ${readonly?'readonly':''} onchange="updateDayReviewField('sector','fundFlow',this.value)" placeholder="例：北向净流入5.2亿">
+      <div style="margin-top:8px;" class="field-label">板块热点变动</div><textarea class="input" ${readonly?'readonly':''} onchange="updateDayReviewField('sector','hotSpot',this.value)" placeholder="记录板块内热点轮动...">${d.sector.hotSpot||''}</textarea>
+    </div>
+    <div class="review-section-card"><div class="rs-title">💰 3. 个人基金持仓盈亏</div>
+      <div class="field-label">基金持仓盈亏</div><textarea class="input" ${readonly?'readonly':''} onchange="updateDayReviewField('fund','holdings',this.value)" placeholder="例：科创芯片ETF +320元...">${d.fund.holdings||''}</textarea>
+      <div style="margin-top:8px;" class="field-label">当日盈亏金额</div><input class="input" value="${d.fund.profit||''}" ${readonly?'readonly':''} onchange="updateDayReviewField('fund','profit',this.value)" placeholder="例：+520元">
+      <div style="margin-top:8px;" class="field-label">仓位变动</div><input class="input" value="${d.fund.positionChange||''}" ${readonly?'readonly':''} onchange="updateDayReviewField('fund','positionChange',this.value)" placeholder="例：加仓科创芯片2万">
+      <div style="margin-top:8px;" class="field-label">加仓/减仓操作记录</div><textarea class="input" ${readonly?'readonly':''} onchange="updateDayReviewField('fund','operation',this.value)" placeholder="详细记录...">${d.fund.operation||''}</textarea>
+    </div>
+    <div class="review-section-card"><div class="rs-title">📝 4. 复盘总结</div>
+      <textarea class="input" style="min-height:160px;" ${readonly?'readonly':''} onchange="updateDayReviewField(null,'summary',this.value)" placeholder="自由填写...">${d.summary||''}</textarea>
+      ${!readonly ? `<div style="margin-top:12px;"><button class="btn btn-primary btn-block" onclick="saveDayReview()">💾 保存复盘</button></div>` : ''}
+    </div>
+    ${readonly ? '<div class="note-box">📌 历史复盘记录仅可查看，不可修改</div>' : ''}`;
+}
+function updateDayReviewField(section, key, val) { const d = Store.get('dayreview', viewingDate); if (section) d[section][key] = val; else d[key] = val; Store.set('dayreview', viewingDate, d); }
+function saveDayReview() { const d = Store.get('dayreview', viewingDate); d._savedAt = new Date().toISOString(); Store.set('dayreview', viewingDate, d); alert('复盘已保存！'); }
+
+// ========== 板块5: 我的账户（存款记账） ==========
+function renderSavings(el, data, readonly, date) {
+  const month = savingsViewMonth || date.slice(0,7);
+  const allDates = Store.getDates('savings');
+  const monthDates = allDates.filter(d => d.startsWith(month));
+  let totalExpense = 0, totalDeposit = 0;
+  const allExpenses = [];
+  monthDates.forEach(d => {
+    const sd = Store.get('savings', d);
+    if (sd) {
+      (sd.expenses||[]).forEach(e => { totalExpense += e.amount||0; allExpenses.push({...e, date:d}); });
+      (sd.deposits||[]).forEach(dp => { totalDeposit += dp.amount||0; });
+    }
+  });
+  allExpenses.sort((a,b) => b.date.localeCompare(a.date));
+  const balance = totalDeposit - totalExpense;
+  const goal = data.goal || 50000;
+  const pct = Math.min(100, Math.round(balance / goal * 100));
+  const gap = Math.max(0, goal - balance);
+  const months = [...new Set(allDates.map(d => d.slice(0,7)))].sort().reverse();
+  const monthPicker = months.length > 1 ? `<div class="month-picker">${months.map(m => `<div class="month-chip ${m===month?'active':''}" onclick="savingsViewMonth='${m}';switchPage('savings')">${m}</div>`).join('')}</div>` : '';
+  const todayExpenses = (data.expenses||[]).sort((a,b) => (b.time||'').localeCompare(a.time||''));
+  const todayDeposits = (data.deposits||[]);
+  const catClass = { '餐饮':'food', '网购':'shopping', '交通':'transport', '家居好物':'home', '其他':'other' };
+
+  el.innerHTML = `
+    ${monthPicker}
+    <div class="savings-overview">
+      <div class="so-row"><span class="so-label">存款目标</span><span class="so-value">¥${goal.toLocaleString()}</span></div>
+      <div class="so-row"><span class="so-label">当前余额</span><span class="so-value">¥${balance.toLocaleString()}</span></div>
+      <div class="savings-progress"><div class="fill" style="width:${pct}%"></div></div>
+      <div class="so-row"><span class="so-goal">进度 ${pct}%</span><span class="savings-gap">距目标差 ¥${gap.toLocaleString()}</span></div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat-box"><div class="stat-label">本月消费</div><div class="stat-value red">¥${totalExpense.toLocaleString()}</div></div>
+      <div class="stat-box"><div class="stat-label">本月存款</div><div class="stat-value green">¥${totalDeposit.toLocaleString()}</div></div>
+      <div class="stat-box"><div class="stat-label">本月结余</div><div class="stat-value primary">¥${balance.toLocaleString()}</div></div>
+    </div>
+    ${!readonly ? `
+    <div class="card"><div class="card-title"><span class="icon">💸</span> 当日支出录入</div>
+      <div class="field-row"><input class="input" id="expName" placeholder="支出项目" style="flex:2;"><input class="input" id="expAmt" placeholder="金额" type="number" style="flex:1;"></div>
+      <div class="field-row" style="margin-top:6px;">
+        <select class="input" id="expCat" style="flex:1;"><option value="餐饮">餐饮</option><option value="网购">网购</option><option value="交通">交通</option><option value="家居好物">家居好物</option><option value="其他">其他</option></select>
+        <button class="btn btn-primary" onclick="addExpense()" style="flex:none;">记录支出</button>
+      </div>
+    </div>
+    <div class="card"><div class="card-title"><span class="icon">💰</span> 当日存款录入</div>
+      <div class="add-row"><input class="input" id="depAmt" placeholder="存入金额" type="number"><button class="btn btn-primary" onclick="addDeposit()" style="flex:none;">记录存款</button></div>
+    </div>` : ''}
+    ${todayExpenses.length ? `<div class="card"><div class="card-title"><span class="icon">📋</span> 当日支出明细</div>
+      ${todayExpenses.map(e => `<div class="expense-item"><span class="exp-cat ${catClass[e.cat]||'other'}">${e.cat}</span><span class="exp-name">${e.name}</span><span class="exp-amt">-¥${e.amount}</span></div>`).join('')}</div>` : ''}
+    ${todayDeposits.length ? `<div class="card"><div class="card-title"><span class="icon">💚</span> 当日存款记录</div>
+      ${todayDeposits.map(dp => `<div class="expense-item"><span class="exp-cat" style="background:#d1fae5;color:#065f46;">存款</span><span class="exp-name">${dp.note||'存入'}</span><span class="deposit-amt">+¥${dp.amount}</span></div>`).join('')}</div>` : ''}
+    ${allExpenses.length > 0 ? `<div class="card"><div class="card-title"><span class="icon">📅</span> ${month} 全部支出</div>
+      ${allExpenses.slice(0,30).map(e => `<div class="expense-item"><span class="exp-cat ${catClass[e.cat]||'other'}">${e.cat}</span><span class="exp-name">${e.name}<span style="font-size:11px;color:var(--text3);margin-left:6px;">${e.date.slice(5)}</span></span><span class="exp-amt">-¥${e.amount}</span></div>`).join('')}
+      ${allExpenses.length > 30 ? `<div style="text-align:center;font-size:12px;color:var(--text3);padding:8px;">...仅显示最近30条</div>` : ''}
+    </div>` : '<div class="empty"><span class="icon">💸</span>暂无支出记录</div>'}
+    ${readonly ? '<div class="note-box">📌 历史归档内容仅可查看，不可编辑</div>' : ''}`;
+}
+function addExpense() {
+  const name = document.getElementById('expName').value.trim();
+  const amt = parseFloat(document.getElementById('expAmt').value);
+  const cat = document.getElementById('expCat').value;
+  if (!name || !amt) return alert('请填写支出项目和金额');
+  const data = Store.get('savings', viewingDate);
+  data.expenses = data.expenses || [];
+  data.expenses.push({ name, amount: amt, cat, time: new Date().toISOString() });
+  Store.set('savings', viewingDate, data);
+  switchPage('savings');
+}
+function addDeposit() {
+  const amt = parseFloat(document.getElementById('depAmt').value);
+  if (!amt) return alert('请填写存入金额');
+  const data = Store.get('savings', viewingDate);
+  data.deposits = data.deposits || [];
+  data.deposits.push({ amount: amt, time: new Date().toISOString(), note: '' });
+  Store.set('savings', viewingDate, data);
+  switchPage('savings');
+}
+
+// ========== 板块6: 居家懒人每日作息表 ==========
+function renderRoutine(el, data, readonly, date) {
+  const periods = {
+    morning: { icon:'🌅', name:'上午', time:'08:00 - 12:00' },
+    afternoon: { icon:'☀️', name:'下午', time:'13:00 - 17:00' },
+    evening: { icon:'🌙', name:'晚间', time:'18:00 - 23:00' }
+  };
+  const doneCount = data.tasks.filter(t => t.done).length;
+  const totalCount = data.tasks.length;
+  const pct = Math.round(doneCount / totalCount * 100);
+  const periodHTML = Object.entries(periods).map(([key, p]) => {
+    const tasks = data.tasks.filter(t => t.period === key);
+    return `<div class="routine-period">
+      <div class="rp-header">${p.icon} ${p.name} <span class="rp-time">${p.time}</span></div>
+      <div class="card">${tasks.map(t => `
+        <div class="routine-task">
+          <div class="rt-row">
+            <span class="rt-time">${t.time}</span>
+            <div class="task-check ${t.done?'done':''}" ${readonly?'':'onclick="toggleRoutineTask('+t.id+')"'}></div>
+            <span class="rt-text" style="${t.done?'text-decoration:line-through;color:var(--text3);':''}">${t.text}</span>
+            <span class="rt-tag">${t.tag}</span>
+          </div>
+        </div>`).join('')}</div>
+    </div>`;
+  }).join('');
+  const weekChartHTML = buildWeekChart(date);
+  el.innerHTML = `
+    <div class="hero-card">
+      <div class="hero-title">居家作息表</div>
+      <div class="hero-date">今日完成 ${doneCount}/${totalCount}（${pct}%）</div>
+      <div class="hero-progress">
+        <div class="hero-progress-bar"><div class="fill" style="width:${pct}%"></div></div>
+        <div class="hero-progress-text">${pct}%</div>
+      </div>
+    </div>
+    ${periodHTML}
+    <div class="card"><div class="card-title"><span class="icon">📊</span> 本周每日完成率</div>
+      ${weekChartHTML}
+    </div>
+    ${readonly ? '<div class="note-box">📌 历史归档内容仅可查看，不可编辑</div>' : ''}`;
+}
+function buildWeekChart(date) {
+  const d = new Date(date);
+  const dayOfWeek = d.getDay() || 7;
+  const monday = new Date(d);
+  monday.setDate(d.getDate() - dayOfWeek + 1);
+  const days = ['一','二','三','四','五','六','日'];
+  let bars = '';
+  for (let i = 0; i < 7; i++) {
+    const cd = new Date(monday);
+    cd.setDate(monday.getDate() + i);
+    const dateStr = cd.toISOString().slice(0,10);
+    const rd = Store.get('routine', dateStr);
+    let pct = 0;
+    if (rd && rd.tasks) {
+      const done = rd.tasks.filter(t => t.done).length;
+      pct = Math.round(done / rd.tasks.length * 100);
+    }
+    const isToday = dateStr === Store.today();
+    bars += `<div class="bar-col">
+      <div class="bar-pct">${pct}%</div>
+      <div class="bar" style="height:${Math.max(4,pct/100*88)}px;background:${isToday?'var(--primary)':'var(--primaryLight)'};"></div>
+      <div class="bar-label">${days[i]}</div>
+    </div>`;
+  }
+  return `<div class="week-chart">${bars}</div>`;
+}
+function toggleRoutineTask(id) {
+  const data = Store.get('routine', viewingDate);
+  const task = data.tasks.find(t => t.id === id);
+  if (task) { task.done = !task.done; Store.set('routine', viewingDate, data); renderPage('routine', viewingDate); }
+}
+
+// ========== 爆款灵感 ==========
+function renderHot(el, data, readonly, date) {
+  el.innerHTML = `<div class="section-divider">今日爆款灵感</div>${data.ideas.map(i => `<div class="card"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;"><div style="font-weight:600;font-size:15px;flex:1;">${i.title}</div><div style="font-size:13px;">${i.heat}</div></div><div style="font-size:13px;color:var(--text2);line-height:1.5;">${i.desc}</div></div>`).join('')}${readonly ? '<div class="note-box">📌 历史归档内容仅可查看，不可编辑</div>' : ''}`;
+}
+
+// ========== 市场收盘 ==========
+function renderReview(el, data, readonly, date) {
+  el.innerHTML = `
+    <div class="card"><div class="card-title"><span class="icon">📊</span> 市场收盘 <span style="margin-left:auto;font-size:13px;color:var(--text3);">${date}</span></div>
+      <div class="market-grid">${data.indices.map(idx => `<div class="market-item"><div class="name">${idx.name}</div><div class="value">${idx.value}</div><div class="change ${idx.up===true?'up':idx.up===false?'down':''}">${idx.up===true?'▲':idx.up===false?'▼':'—'} ${idx.change} (${idx.pct})</div></div>`).join('')}</div>
+      <div style="margin-top:12px;font-size:13px;color:var(--text2);line-height:1.7;"><p><strong>市场概况：</strong>${data.summary||'暂无数据'}</p><p><strong>板块轮动：</strong>${data.sectors||'待更新'}</p><p><strong>资金动向：</strong>${data.funds||'待更新'}</p><p><strong>市场情绪：</strong>${data.emotion||'待更新'}</p></div>
+      ${!readonly ? `<div style="margin-top:10px;"><textarea class="input" onchange="updateReviewNote(this.value)" placeholder="添加个人笔记...">${data.note||''}</textarea></div>` : (data.note ? `<div class="note-box">📝 ${data.note}</div>` : '')}
+    </div>
+    ${readonly ? '<div class="note-box">📌 历史归档内容仅可查看，不可编辑</div>' : ''}`;
+}
+
+// ===================== ACTIONS =====================
+function toggleTask(page, section, id) { const d = Store.get(page, viewingDate); const it = d[section].find(x => x.id === id); if (it) { it.done = !it.done; Store.set(page, viewingDate, d); renderPage(page, viewingDate); } }
+function updateReviewNote(val) { const d = Store.get('review', viewingDate); d.note = val; Store.set('review', viewingDate, d); }
+
+// ===================== OVERVIEW =====================
+function openOverview() {
+  const modal = document.getElementById('overviewModal');
+  const content = document.getElementById('overviewContent');
+  const date = viewingDate;
+  const plan = Store.get('plan', date) || {};
+  const videos = Store.get('videos', date) || {};
+  const finnews = Store.get('finnews', date) || {};
+  const dayreview = Store.get('dayreview', date) || {};
+  const savings = Store.get('savings', date) || {};
+  const routine = Store.get('routine', date) || {};
+  const planDone = plan.tasks ? plan.tasks.filter(t=>t.done).length : 0;
+  const planTotal = plan.tasks ? plan.tasks.length : 0;
+  const growthDone = plan.growth ? plan.growth.filter(t=>t.done).length : 0;
+  const growthTotal = plan.growth ? plan.growth.length : 0;
+  const finDone = finnews.items ? finnews.items.filter(i=>i.userNote).length : 0;
+  const finTotal = finnews.items ? finnews.items.length : 0;
+  const routineDone = routine.tasks ? routine.tasks.filter(t=>t.done).length : 0;
+  const routineTotal = routine.tasks ? routine.tasks.length : 0;
+  const todayExpense = (savings.expenses||[]).reduce((s,e) => s + (e.amount||0), 0);
+  const todayDeposit = (savings.deposits||[]).reduce((s,d) => s + (d.amount||0), 0);
+  const html = `
+    <div class="overview-section"><div class="section-title">📋 每日计划</div><div class="progress-bar"><div class="fill" style="width:${planTotal+growthTotal?((planDone+growthDone)/(planTotal+growthTotal)*100):0}%"></div></div><div class="summary">基础 ${planDone}/${planTotal} · 成长 ${growthDone}/${growthTotal}</div></div>
+    <div class="overview-section"><div class="section-title">🎬 低粉爆款视频</div><div class="summary">今日采集 ${videos.list?videos.list.length:0} 条</div></div>
+    <div class="overview-section"><div class="section-title">💹 财经新闻</div><div class="progress-bar"><div class="fill" style="width:${finTotal?(finDone/finTotal*100):0}%"></div></div><div class="summary">${finTotal}条 · ${finDone}条已批注</div></div>
+    <div class="overview-section"><div class="section-title">📈 基金复盘</div><div class="summary">${dayreview.summary?'已填写':'待填写'} · ${dayreview._savedAt?'已保存':'未保存'}</div></div>
+    <div class="overview-section"><div class="section-title">🏦 存款账户</div><div class="summary">今日消费 ¥${todayExpense} · 存款 ¥${todayDeposit}</div></div>
+    <div class="overview-section"><div class="section-title">🏠 居家作息</div><div class="progress-bar"><div class="fill" style="width:${routineTotal?(routineDone/routineTotal*100):0}%"></div></div><div class="summary">${routineDone}/${routineTotal} 项已完成</div></div>
+  `;
+  content.innerHTML = html;
+  modal.classList.add('show');
+}
+function closeOverview(e) { if (!e || e.target === document.getElementById('overviewModal')) document.getElementById('overviewModal').classList.remove('show'); }
+
+// ===================== INIT =====================
+function init() {
+  document.getElementById('headerDate').textContent = currentDate;
+  ['plan','videos','hot','finnews','review','dayreview','savings','routine'].forEach(type => {
+    if (!Store.get(type, currentDate)) Store.set(type, currentDate, Generators[type](currentDate));
+  });
+  switchPage('plan');
+}
+init();
+</script>
+</body>
+</html>
